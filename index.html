@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Driven Drone Swarm - PyTorch Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+            overflow: hidden;
+            color: white;
+        }
+        
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 350px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header {
+            color: #00ff88;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #e0e0e0;
+        }
+        
+        .control-value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #333;
+            outline: none;
+            margin-bottom: 10px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #00ff88, #00cc6a);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #00ff88, #00cc6a);
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 4px 6px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            min-width: 80px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 136, 0.4);
+        }
+        
+        .btn.danger {
+            background: linear-gradient(45deg, #ff4757, #ff3742);
+        }
+        
+        .btn.danger:hover {
+            box-shadow: 0 5px 15px rgba(255, 71, 87, 0.4);
+        }
+        
+        .formation-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .formation-btn {
+            background: linear-gradient(45deg, #3742fa, #2f32e2);
+            padding: 10px 15px;
+            font-size: 12px;
+            min-width: auto;
+            margin: 2px;
+        }
+        
+        .formation-btn:hover {
+            box-shadow: 0 5px 15px rgba(55, 66, 250, 0.4);
+        }
+        
+        .formation-btn.active {
+            background: linear-gradient(45deg, #00ff88, #00cc6a);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
+        }
+        
+        #stats {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            min-width: 250px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .stat-header {
+            color: #00ff88;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+        
+        .stat-label {
+            color: #e0e0e0;
+        }
+        
+        .stat-value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+        
+        #loadFileBtn {
+            background: linear-gradient(45deg, #ffa502, #ff6348);
+            margin-bottom: 15px;
+            width: 100%;
+        }
+        
+        #loadFileBtn:hover {
+            box-shadow: 0 5px 15px rgba(255, 165, 2, 0.4);
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .connection-status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-connected {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            border: 1px solid #00ff88;
+        }
+        
+        .status-disconnected {
+            background: rgba(255, 71, 87, 0.2);
+            color: #ff4757;
+            border: 1px solid #ff4757;
+        }
+        
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.75);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 12px;
+            max-width: 300px;
+            color: #b0b0b0;
+        }
+        
+        .trail {
+            opacity: 0.6;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        
+        .loading-content {
+            text-align: center;
+            color: white;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid #333;
+            border-top: 3px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <h3>Initializing 3D Visualization...</h3>
+                <p>Loading PyTorch Trained Models</p>
+            </div>
+        </div>
+        
+        <div id="controls">
+            <div class="header">🤖 AI Drone Control</div>
+            
+            <div class="connection-status status-disconnected" id="connectionStatus">
+                No Training Data Loaded
+            </div>
+            
+            <input type="file" id="fileInput" class="file-input" accept=".json">
+            <button id="loadFileBtn" onclick="document.getElementById('fileInput').click()">
+                📁 Load Training Data
+            </button>
+            
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Simulation Speed:</span>
+                    <span class="control-value" id="speedValue">1.0x</span>
+                </div>
+                <input type="range" id="speedSlider" min="0.1" max="3.0" step="0.1" value="1.0">
+            </div>
+            
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Trail Length:</span>
+                    <span class="control-value" id="trailValue">50</span>
+                </div>
+                <input type="range" id="trailSlider" min="0" max="100" value="50">
+            </div>
+            
+            <div class="control-group">
+                <button id="playBtn" class="btn">▶️ Play</button>
+                <button id="pauseBtn" class="btn">⏸️ Pause</button>
+                <button id="resetBtn" class="btn danger">🔄 Reset</button>
+            </div>
+            
+            <div class="control-group">
+                <div class="control-label">
+                    <span>Formation Type:</span>
+                </div>
+                <div class="formation-buttons">
+                    <button class="formation-btn active" data-formation="sphere">🌐 Sphere</button>
+                    <button class="formation-btn" data-formation="line">📏 Line</button>
+                    <button class="formation-btn" data-formation="triangle">🔺 Triangle</button>
+                    <button class="formation-btn" data-formation="random">🎲 Random</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="stats">
+            <div class="stat-header">📊 Live Metrics</div>
+            <div class="stat-row">
+                <span class="stat-label">Active Drones:</span>
+                <span class="stat-value" id="activeDrones">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Avg Fitness:</span>
+                <span class="stat-value" id="avgFitness">0.00</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Formation Score:</span>
+                <span class="stat-value" id="formationScore">0.00</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Target Distance:</span>
+                <span class="stat-value" id="targetDistance">0.00</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Total Collisions:</span>
+                <span class="stat-value" id="totalCollisions">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Simulation Time:</span>
+                <span class="stat-value" id="simTime">0.0s</span>
+            </div>
+        </div>
+        
+        <div id="instructions">
+            <strong>🎮 Controls:</strong><br>
+            • Mouse: Rotate camera<br>
+            • Scroll: Zoom in/out<br>
+            • Load your simulation_data_final.json<br>
+            • Watch trained AI drones fly!
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        class PyTorchDroneVisualization {
+            constructor() {
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                
+                this.drones = [];
+                this.obstacles = [];
+                this.targetPositions = [];
+                this.droneTrails = [];
+                
+                this.trainingData = null;
+                this.isPlaying = false;
+                this.simulationSpeed = 1.0;
+                this.simulationTime = 0;
+                
+                this.currentFormation = 'sphere';
+                this.trailLength = 50;
+                
+                this.setupScene();
+                this.setupLights();
+                this.setupControls();
+                this.setupUI();
+                this.animate();
+                
+                // Hide loading overlay after initialization
+                setTimeout(() => {
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                }, 1500);
+            }
+            
+            setupScene() {
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setClearColor(0x000011, 1);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                this.renderer.toneMappingExposure = 1.2;
+                
+                document.getElementById('container').appendChild(this.renderer.domElement);
+                
+                this.camera.position.set(0, 25, 35);
+                this.camera.lookAt(0, 5, 0);
+                
+                // Enhanced environment
+                const gridHelper = new THREE.GridHelper(60, 30, 0x444444, 0x222222);
+                this.scene.add(gridHelper);
+                
+                // Add coordinate axes
+                const axesHelper = new THREE.AxesHelper(5);
+                this.scene.add(axesHelper);
+                
+                // Add sky sphere
+                const skyGeometry = new THREE.SphereGeometry(200, 32, 32);
+                const skyMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x0c1445,
+                    side: THREE.BackSide,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const sky = new THREE.Mesh(skyGeometry, skyMaterial);
+                this.scene.add(sky);
+            }
+            
+            setupLights() {
+                // Ambient light
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+                this.scene.add(ambientLight);
+                
+                // Main directional light
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(20, 30, 10);
+                directionalLight.castShadow = true;
+                directionalLight.shadow.mapSize.width = 2048;
+                directionalLight.shadow.mapSize.height = 2048;
+                directionalLight.shadow.camera.near = 0.5;
+                directionalLight.shadow.camera.far = 100;
+                directionalLight.shadow.camera.left = -30;
+                directionalLight.shadow.camera.right = 30;
+                directionalLight.shadow.camera.top = 30;
+                directionalLight.shadow.camera.bottom = -30;
+                this.scene.add(directionalLight);
+                
+                // Accent lights
+                const pointLight1 = new THREE.PointLight(0x00ff88, 0.6, 50);
+                pointLight1.position.set(15, 15, 15);
+                this.scene.add(pointLight1);
+                
+                const pointLight2 = new THREE.PointLight(0x3742fa, 0.4, 40);
+                pointLight2.position.set(-15, 15, -15);
+                this.scene.add(pointLight2);
+            }
+            
+            setupControls() {
+                let mouseDown = false;
+                let mouseX = 0;
+                let mouseY = 0;
+                
+                this.renderer.domElement.addEventListener('mousedown', (e) => {
+                    mouseDown = true;
+                    mouseX = e.clientX;
+                    mouseY = e.clientY;
+                });
+                
+                document.addEventListener('mouseup', () => {
+                    mouseDown = false;
+                });
+                
+                this.renderer.domElement.addEventListener('mousemove', (e) => {
+                    if (!mouseDown) return;
+                    
+                    const deltaX = e.clientX - mouseX;
+                    const deltaY = e.clientY - mouseY;
+                    
+                    const spherical = new THREE.Spherical();
+                    spherical.setFromVector3(this.camera.position.clone().sub(new THREE.Vector3(0, 5, 0)));
+                    spherical.theta -= deltaX * 0.01;
+                    spherical.phi += deltaY * 0.01;
+                    spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+                    
+                    const newPos = new THREE.Vector3().setFromSpherical(spherical);
+                    newPos.add(new THREE.Vector3(0, 5, 0));
+                    this.camera.position.copy(newPos);
+                    this.camera.lookAt(0, 5, 0);
+                    
+                    mouseX = e.clientX;
+                    mouseY = e.clientY;
+                });
+                
+                // Zoom controls
+                this.renderer.domElement.addEventListener('wheel', (e) => {
+                    const distance = this.camera.position.distanceTo(new THREE.Vector3(0, 5, 0));
+                    const newDistance = Math.max(10, Math.min(100, distance + e.deltaY * 0.1));
+                    const direction = this.camera.position.clone().sub(new THREE.Vector3(0, 5, 0)).normalize();
+                    this.camera.position.copy(direction.multiplyScalar(newDistance).add(new THREE.Vector3(0, 5, 0)));
+                });
+            }
+            
+            setupUI() {
+                // File input handler
+                document.getElementById('fileInput').addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        this.loadTrainingData(file);
+                    }
+                });
+                
+                // Control buttons
+                document.getElementById('playBtn').addEventListener('click', () => this.play());
+                document.getElementById('pauseBtn').addEventListener('click', () => this.pause());
+                document.getElementById('resetBtn').addEventListener('click', () => this.reset());
+                
+                // Sliders
+                document.getElementById('speedSlider').addEventListener('input', (e) => {
+                    this.simulationSpeed = parseFloat(e.target.value);
+                    document.getElementById('speedValue').textContent = this.simulationSpeed.toFixed(1) + 'x';
+                });
+                
+                document.getElementById('trailSlider').addEventListener('input', (e) => {
+                    this.trailLength = parseInt(e.target.value);
+                    document.getElementById('trailValue').textContent = this.trailLength.toString();
+                    this.updateTrailLengths();
+                });
+                
+                // Formation buttons
+                document.querySelectorAll('.formation-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.formation-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        this.currentFormation = e.target.dataset.formation;
+                        this.updateFormation();
+                    });
+                });
+            }
+            
+            async loadTrainingData(file) {
+                try {
+                    const text = await file.text();
+                    this.trainingData = JSON.parse(text);
+                    
+                    this.createDronesFromData();
+                    this.createObstaclesFromData();
+                    this.updateConnectionStatus(true);
+                    
+                    console.log('Training data loaded:', this.trainingData);
+                } catch (error) {
+                    console.error('Error loading training data:', error);
+                    alert('Error loading file. Make sure it\'s a valid JSON file from your PyTorch training.');
+                }
+            }
+            
+            createDronesFromData() {
+                // Clear existing drones
+                this.drones.forEach(drone => {
+                    this.scene.remove(drone.mesh);
+                    if (drone.trailMesh) this.scene.remove(drone.trailMesh);
+                });
+                this.drones = [];
+                this.droneTrails = [];
+                
+                if (!this.trainingData || !this.trainingData.drones) return;
+                
+                this.trainingData.drones.forEach((droneData, index) => {
+                    const drone = this.createDrone(droneData, index);
+                    this.drones.push(drone);
+                    
+                    // Initialize trail
+                    this.droneTrails[index] = [];
+                });
+            }
+            
+            createDrone(droneData, index) {
+                // Create sleek drone model
+                const droneGroup = new THREE.Group();
+                
+                // Main body (sleek cylinder)
+                const bodyGeometry = new THREE.CylinderGeometry(0.3, 0.4, 0.2, 8);
+                const bodyMaterial = new THREE.MeshLambertMaterial({ 
+                    color: new THREE.Color().setHSL((index * 0.1) % 1, 0.8, 0.6),
+                    transparent: true,
+                    opacity: 0.9
+                });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                droneGroup.add(body);
+                
+                // Propeller arms
+                for (let i = 0; i < 4; i++) {
+                    const armGeometry = new THREE.BoxGeometry(0.8, 0.05, 0.05);
+                    const armMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+                    const arm = new THREE.Mesh(armGeometry, armMaterial);
+                    arm.rotation.y = (i * Math.PI) / 2;
+                    droneGroup.add(arm);
+                    
+                    // Propellers
+                    const propGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.02, 6);
+                    const propMaterial = new THREE.MeshLambertMaterial({ 
+                        color: 0x666666, 
+                        transparent: true, 
+                        opacity: 0.7 
+                    });
+                    const prop = new THREE.Mesh(propGeometry, propMaterial);
+                    prop.position.x = Math.cos((i * Math.PI) / 2) * 0.4;
+                    prop.position.z = Math.sin((i * Math.PI) / 2) * 0.4;
+                    prop.position.y = 0.15;
+                    droneGroup.add(prop);
+                }
+                
+                // LED light
+                const lightGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+                const lightMaterial = new THREE.MeshBasicMaterial({ 
+                    color: bodyMaterial.color,
+                    emissive: bodyMaterial.color,
+                    emissiveIntensity: 0.3
+                });
+                const light = new THREE.Mesh(lightGeometry, lightMaterial);
+                light.position.y = 0.2;
+                droneGroup.add(light);
+                
+                // Set initial position
+                droneGroup.position.set(...droneData.position);
+                droneGroup.castShadow = true;
+                
+                this.scene.add(droneGroup);
+                
+                return {
+                    mesh: droneGroup,
+                    data: droneData,
+                    trailMesh: null,
+                    targetMesh: this.createTargetIndicator(droneData.target_position, index)
+                };
+            }
+            
+            createTargetIndicator(targetPos, index) {
+                const geometry = new THREE.RingGeometry(0.8, 1.0, 8);
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: new THREE.Color().setHSL((index * 0.1) % 1, 0.6, 0.7),
+                    transparent: true,
+                    opacity: 0.4,
+                    side: THREE.DoubleSide
+                });
+                const ring = new THREE.Mesh(geometry, material);
+                ring.position.set(...targetPos);
+                ring.rotation.x = Math.PI / 2;
+                this.scene.add(ring);
+                return ring;
+            }
+            
+            createObstaclesFromData() {
+                // Clear existing obstacles
+                this.obstacles.forEach(obstacle => {
+                    this.scene.remove(obstacle);
+                });
+                this.obstacles = [];
+                
+                if (!this.trainingData || !this.trainingData.obstacles) return;
+                
+                this.trainingData.obstacles.forEach(obstacleData => {
+                    const geometry = new THREE.SphereGeometry(obstacleData.radius, 16, 16);
+                    const material = new THREE.MeshLambertMaterial({ 
+                        color: 0xff4757,
+                        transparent: true,
+                        opacity: 0.7
+                    });
+                    const obstacle = new THREE.Mesh(geometry, material);
+                    obstacle.position.set(...obstacleData.position);
+                    obstacle.castShadow = true;
+                    obstacle.receiveShadow = true;
+                    
+                    this.obstacles.push(obstacle);
+                    this.scene.add(obstacle);
+                });
+            }
+            
+            updateFormation() {
+                if (!this.trainingData) return;
+                
+                this.drones.forEach((drone, index) => {
+                    const targetPos = this.calculateFormationPosition(index, this.drones.length, this.currentFormation);
+                    if (drone.targetMesh) {
+                        drone.targetMesh.position.set(...targetPos);
+                    }
+                });
+            }
+            
+            calculateFormationPosition(droneId, totalDrones, formationType) {
+                switch(formationType) {
+                    case 'sphere':
+                        const angle = (droneId / totalDrones) * 2 * Math.PI;
+                        const radius = 8.0;
+                        const height = Math.cos(angle * 0.7) * 2;
+                        return [
+                            Math.cos(angle) * radius,
+                            5 + height,
+                            Math.sin(angle) * radius
+                        ];
+                    case 'line':
+                        const spacing = 2.5;
+                        return [
+                            (droneId - totalDrones / 2) * spacing,
+                            5,
+                            0
+                        ];
+                    case 'triangle':
+                        const layer = Math.floor(Math.sqrt(droneId));
+                        const posInLayer = droneId - (layer * layer);
+                        const triangleSpacing = 2.0;
+                        return [
+                            (posInLayer - layer / 2) * triangleSpacing,
+                            5,
+                            layer * triangleSpacing * 0.8
+                        ];
+                    default:
+                        return [
+                            (Math.random() - 0.5) * 20,
+                            Math.random() * 5 + 3,
+                            (Math.random() - 0.5) * 20
+                        ];
+                }
+            }
+            
+            updateConnectionStatus(connected) {
+                const status = document.getElementById('connectionStatus');
+                if (connected) {
+                    status.textContent = '✅ Training Data Loaded';
+                    status.className = 'connection-status status-connected';
+                } else {
+                    status.textContent = '❌ No Training Data';
+                    status.className = 'connection-status status-disconnected';
+                }
+            }
+            
+            updateTrailLengths() {
+                this.droneTrails.forEach((trail, index) => {
+                    if (trail.length > this.trailLength) {
+                        trail.splice(0, trail.length - this.trailLength);
+                        this.updateDroneTrail(index);
+                    }
+                });
+            }
+            
+            updateDroneTrail(droneIndex) {
+                const drone = this.drones[droneIndex];
+                const trail = this.droneTrails[droneIndex];
+                
+                if (!drone || trail.length < 2) return;
+                
+                // Remove old trail
+                if (drone.trailMesh) {
+                    this.scene.remove(drone.trailMesh);
+                }
+                
+                // Create new trail
+                const geometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(trail.length * 3);
+                const colors = new Float32Array(trail.length * 3);
+                
+                for (let i = 0; i < trail.length; i++) {
+                    positions[i * 3] = trail[i].x;
+                    positions[i * 3 + 1] = trail[i].y;
+                    positions[i * 3 + 2] = trail[i].z;
+                    
+                    const alpha = i / trail.length;
+                    const color = new THREE.Color().setHSL((droneIndex * 0.1) % 1, 0.8, 0.6);
+                    colors[i * 3] = color.r * alpha;
+                    colors[i * 3 + 1] = color.g * alpha;
+                    colors[i * 3 + 2] = color.b * alpha;
+                }
+                
+                geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                
+                const material = new THREE.LineBasicMaterial({ 
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                
+                drone.trailMesh = new THREE.Line(geometry, material);
+                this.scene.add(drone.trailMesh);
+            }
+            
+            play() {
+                this.isPlaying = true;
+                console.log('Simulation started');
+            }
+            
+            pause() {
+                this.isPlaying = false;
+                console.log('Simulation paused');
+            }
+            
+            reset() {
+                this.simulationTime = 0;
+                this.isPlaying = false;
+                
+                // Reset drone positions to initial state
+                if (this.trainingData) {
+                    this.drones.forEach((drone, index) => {
+                        if (this.trainingData.drones[index]) {
+                            drone.mesh.position.set(...this.trainingData.drones[index].position);
+                        }
+                    });
+                }
+                
+                // Clear trails
+                this.droneTrails.forEach(trail => trail.length = 0);
+                this.drones.forEach(drone => {
+                    if (drone.trailMesh) {
+                        this.scene.remove(drone.trailMesh);
+                        drone.trailMesh = null;
+                    }
+                });
+                
+                console.log('Simulation reset');
+            }
+            
+            update() {
+                if (!this.isPlaying || !this.trainingData) return;
+                
+                this.simulationTime += 0.016 * this.simulationSpeed; // ~60fps
+                
+                // Simulate drone movement based on AI behavior
+                this.drones.forEach((drone, index) => {
+                    this.updateDroneMovement(drone, index);
+                    this.updateDroneTrail(index);
+                });
+                
+                // Update obstacles (add some rotation for visual interest)
+                this.obstacles.forEach((obstacle, index) => {
+                    obstacle.rotation.y += 0.01;
+                    obstacle.rotation.x += 0.005;
+                });
+                
+                // Update target rings
+                this.drones.forEach(drone => {
+                    if (drone.targetMesh) {
+                        drone.targetMesh.rotation.z += 0.02;
+                        // Pulsing effect
+                        const pulse = Math.sin(this.simulationTime * 2) * 0.1 + 1;
+                        drone.targetMesh.scale.set(pulse, pulse, pulse);
+                    }
+                });
+                
+                this.updateUI();
+            }
+            
+            updateDroneMovement(drone, index) {
+                // Get target position for current formation
+                const targetPos = this.calculateFormationPosition(index, this.drones.length, this.currentFormation);
+                const target = new THREE.Vector3(...targetPos);
+                const current = drone.mesh.position.clone();
+                
+                // Simple AI movement simulation (moving towards formation target)
+                const direction = target.clone().sub(current);
+                const distance = direction.length();
+                
+                if (distance > 0.1) {
+                    direction.normalize();
+                    
+                    // Add some intelligent behavior patterns
+                    const moveSpeed = 0.05 * this.simulationSpeed;
+                    const smoothing = Math.min(distance / 5, 1); // Slow down as approaching target
+                    
+                    // Add some randomness to simulate AI decision making
+                    const randomFactor = 0.1;
+                    direction.x += (Math.random() - 0.5) * randomFactor;
+                    direction.y += (Math.random() - 0.5) * randomFactor * 0.5;
+                    direction.z += (Math.random() - 0.5) * randomFactor;
+                    direction.normalize();
+                    
+                    // Apply movement
+                    const movement = direction.multiplyScalar(moveSpeed * smoothing);
+                    drone.mesh.position.add(movement);
+                    
+                    // Rotate drone to face movement direction
+                    if (movement.length() > 0.001) {
+                        drone.mesh.lookAt(drone.mesh.position.clone().add(movement));
+                        drone.mesh.rotateX(Math.PI / 2); // Correct orientation for drone
+                    }
+                    
+                    // Add trail point
+                    if (this.trailLength > 0) {
+                        this.droneTrails[index].push(drone.mesh.position.clone());
+                        if (this.droneTrails[index].length > this.trailLength) {
+                            this.droneTrails[index].shift();
+                        }
+                        
+                        // Update trail visual every few frames for performance
+                        if (Math.floor(this.simulationTime * 10) % 5 === 0) {
+                            this.updateDroneTrail(index);
+                        }
+                    }
+                    
+                    // Animate propellers
+                    drone.mesh.children.forEach(child => {
+                        if (child.geometry && child.geometry.type === 'CylinderGeometry' && child.position.y > 0.1) {
+                            child.rotation.y += 0.5 * this.simulationSpeed;
+                        }
+                    });
+                }
+                
+                // Keep drones within bounds
+                const bounds = 25;
+                drone.mesh.position.x = Math.max(-bounds, Math.min(bounds, drone.mesh.position.x));
+                drone.mesh.position.y = Math.max(0.5, Math.min(20, drone.mesh.position.y));
+                drone.mesh.position.z = Math.max(-bounds, Math.min(bounds, drone.mesh.position.z));
+            }
+            
+            updateUI() {
+                if (!this.trainingData) return;
+                
+                // Update stats
+                document.getElementById('activeDrones').textContent = this.drones.length;
+                document.getElementById('simTime').textContent = this.simulationTime.toFixed(1) + 's';
+                
+                if (this.trainingData.metrics) {
+                    document.getElementById('avgFitness').textContent = this.trainingData.metrics.avg_fitness?.toFixed(2) || '0.00';
+                    document.getElementById('formationScore').textContent = this.trainingData.metrics.formation_score?.toFixed(2) || '0.00';
+                    document.getElementById('targetDistance').textContent = this.trainingData.metrics.avg_target_distance?.toFixed(2) || '0.00';
+                    document.getElementById('totalCollisions').textContent = this.trainingData.metrics.total_collisions || '0';
+                } else {
+                    // Calculate real-time metrics
+                    let totalDistance = 0;
+                    let formationScore = 0;
+                    
+                    this.drones.forEach((drone, index) => {
+                        const targetPos = this.calculateFormationPosition(index, this.drones.length, this.currentFormation);
+                        const distance = drone.mesh.position.distanceTo(new THREE.Vector3(...targetPos));
+                        totalDistance += distance;
+                        formationScore += Math.max(0, 10 - distance);
+                    });
+                    
+                    const avgDistance = totalDistance / this.drones.length;
+                    const avgFormationScore = formationScore / this.drones.length;
+                    
+                    document.getElementById('targetDistance').textContent = avgDistance.toFixed(2);
+                    document.getElementById('formationScore').textContent = avgFormationScore.toFixed(2);
+                    document.getElementById('avgFitness').textContent = 'LIVE';
+                }
+            }
+            
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                this.update();
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+        
+        // Demo data for when no file is loaded
+        const createDemoData = () => {
+            const demoData = {
+                drones: [],
+                obstacles: [],
+                formation: { type: 'sphere', count: 8 },
+                metrics: {
+                    avg_fitness: 78.51,
+                    formation_score: 2.16,
+                    total_collisions: 0,
+                    avg_target_distance: 9.03
+                }
+            };
+            
+            // Create demo drones
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const radius = 6;
+                demoData.drones.push({
+                    id: i,
+                    position: [
+                        Math.cos(angle) * radius + (Math.random() - 0.5) * 2,
+                        5 + (Math.random() - 0.5) * 2,
+                        Math.sin(angle) * radius + (Math.random() - 0.5) * 2
+                    ],
+                    velocity: [0, 0, 0],
+                    fitness: 78.51,
+                    collisions: 0,
+                    target_position: [
+                        Math.cos(angle) * 8,
+                        5,
+                        Math.sin(angle) * 8
+                    ]
+                });
+            }
+            
+            // Create demo obstacles
+            for (let i = 0; i < 6; i++) {
+                demoData.obstacles.push({
+                    position: [
+                        (Math.random() - 0.5) * 30,
+                        Math.random() * 8 + 2,
+                        (Math.random() - 0.5) * 30
+                    ],
+                    radius: Math.random() * 1.5 + 0.8
+                });
+            }
+            
+            return demoData;
+        };
+        
+        // Initialize visualization
+        let visualization;
+        
+        window.addEventListener('load', () => {
+            visualization = new PyTorchDroneVisualization();
+            
+            // Load demo data initially
+            visualization.trainingData = createDemoData();
+            visualization.createDronesFromData();
+            visualization.createObstaclesFromData();
+            visualization.updateConnectionStatus(false); // Still show as demo data
+            
+            console.log('🚁 PyTorch Drone Swarm Visualization Ready!');
+            console.log('💡 Load your simulation_data_final.json to see trained AI behavior');
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (visualization) {
+                visualization.camera.aspect = window.innerWidth / window.innerHeight;
+                visualization.camera.updateProjectionMatrix();
+                visualization.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+        
+        // Handle keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (!visualization) return;
+            
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    if (visualization.isPlaying) {
+                        visualization.pause();
+                    } else {
+                        visualization.play();
+                    }
+                    break;
+                case 'r':
+                    visualization.reset();
+                    break;
+                case '1':
+                    document.querySelector('[data-formation="sphere"]').click();
+                    break;
+                case '2':
+                    document.querySelector('[data-formation="line"]').click();
+                    break;
+                case '3':
+                    document.querySelector('[data-formation="triangle"]').click();
+                    break;
+                case '4':
+                    document.querySelector('[data-formation="random"]').click();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>
